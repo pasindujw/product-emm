@@ -156,6 +156,8 @@ public class Constants {
 
 	public static final String SERVICE_PACKAGE_NAME = "org.wso2.emm.system.service";
 	public static final String EMM_DB = "emm_db";
+	public static final String TOKEN_EXPIRED = "token_expired";
+	public static final int SIGN_IN_NOTIFICATION_ID = 0;
 
 	/**
 	 * Device certificates.

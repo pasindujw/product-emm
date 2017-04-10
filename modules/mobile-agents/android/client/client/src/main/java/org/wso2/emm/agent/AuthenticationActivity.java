@@ -19,6 +19,7 @@ package org.wso2.emm.agent;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.NotificationManager;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -59,6 +60,7 @@ import org.wso2.emm.agent.proxy.interfaces.APIResultCallBack;
 import org.wso2.emm.agent.proxy.interfaces.AuthenticationCallback;
 import org.wso2.emm.agent.proxy.utils.Constants.HTTP_METHODS;
 import org.wso2.emm.agent.services.DynamicClientManager;
+import org.wso2.emm.agent.services.LocalNotification;
 import org.wso2.emm.agent.utils.CommonDialogUtils;
 import org.wso2.emm.agent.utils.CommonUtils;
 import org.wso2.emm.agent.utils.Constants;
@@ -80,6 +82,7 @@ public class AuthenticationActivity extends SherlockActivity implements APIAcces
 	private EditText etDomain;
 	private EditText etPassword;
 	private RadioButton radioBYOD;
+	private RadioButton radioCOPE;
 	private String deviceType;
 	private Context context;
 	private String username;
@@ -92,6 +95,7 @@ public class AuthenticationActivity extends SherlockActivity implements APIAcces
 	private DeviceInfo deviceInfo;
 	private static final String TAG = AuthenticationActivity.class.getSimpleName();
 	private ClientAuthenticator authenticator;
+	private boolean isReLogin = false;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -107,6 +111,7 @@ public class AuthenticationActivity extends SherlockActivity implements APIAcces
 		etUsername = (EditText) findViewById(R.id.etUsername);
 		etPassword = (EditText) findViewById(R.id.etPassword);
 		radioBYOD = (RadioButton) findViewById(R.id.radioBYOD);
+		radioCOPE = (RadioButton) findViewById(R.id.radioCOPE);
 		loginLayout = (LinearLayout) findViewById(R.id.errorLayout);
 		etDomain.setFocusable(true);
 		etDomain.requestFocus();
@@ -117,6 +122,23 @@ public class AuthenticationActivity extends SherlockActivity implements APIAcces
 		// change button color background till user enters a valid input
 		btnRegister.setBackground(getResources().getDrawable(R.drawable.btn_grey));
 		btnRegister.setTextColor(getResources().getColor(R.color.black));
+
+		if (Preference.hasPreferenceKey(context, Constants.TOKEN_EXPIRED)) {
+			etDomain.setEnabled(false);
+			etDomain.setTextColor(getResources().getColor(R.color.black));
+			etUsername.setEnabled(false);
+			etUsername.setTextColor(getResources().getColor(R.color.black));
+			btnRegister.setText(R.string.common_signin_button_text);
+			radioBYOD.setVisibility(View.GONE);
+			radioCOPE.setVisibility(View.GONE);
+			etPassword.setFocusable(true);
+			etPassword.requestFocus();
+			String tenantedUserName = Preference.getString(context, Constants.USERNAME);
+			int tenantSeparator = tenantedUserName.lastIndexOf('@');
+			etUsername.setText(tenantedUserName.substring(0, tenantSeparator));
+			etDomain.setText(tenantedUserName.substring(tenantSeparator + 1, tenantedUserName.length()));
+			isReLogin = true;
+		}
 
 		if(Constants.HIDE_LOGIN_UI) {
 			loginLayout.setVisibility(View.GONE);
@@ -348,18 +370,28 @@ public class AuthenticationActivity extends SherlockActivity implements APIAcces
 	public void onAPIAccessReceive(String status) {
         if (status != null) {
 			if (status.trim().equals(Constants.Status.SUCCESSFUL)) {
-
-				Preference.putString(context, Constants.USERNAME, username);
-
-				// Check network connection availability before calling the API.
 				CommonDialogUtils.stopProgressDialog(progressDialog);
-				if (CommonUtils.isNetworkAvailable(context)) {
-					getLicense();
+				if (isReLogin) {
+					runOnUiThread(new Runnable() {
+						@Override
+						public void run() {
+							Toast.makeText(context, R.string.authentication_successful, Toast.LENGTH_LONG).show();
+						}
+					});
+					LocalNotification.startPolling(context);
+					Preference.removePreference(context, Constants.TOKEN_EXPIRED);
+					NotificationManager mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+					mNotificationManager.cancel(Constants.TOKEN_EXPIRED, Constants.SIGN_IN_NOTIFICATION_ID);
+					finish();
 				} else {
-					CommonDialogUtils.stopProgressDialog(progressDialog);
-					CommonDialogUtils.showNetworkUnavailableMessage(AuthenticationActivity.this);
+					Preference.putString(context, Constants.USERNAME, username);
+					// Check network connection availability before calling the API.
+					if (CommonUtils.isNetworkAvailable(context)) {
+						getLicense();
+					} else {
+						CommonDialogUtils.showNetworkUnavailableMessage(AuthenticationActivity.this);
+					}
 				}
-
 			} else if (status.trim().equals(Constants.Status.AUTHENTICATION_FAILED)) {
 				showAuthenticationError();
 				// clearing client credentials from shared memory
@@ -699,20 +731,24 @@ public class AuthenticationActivity extends SherlockActivity implements APIAcces
 	}
 	
 	private void showAuthenticationDialog(){
-		StringBuilder messageBuilder = new StringBuilder();
-		messageBuilder.append(getResources().getString(R.string.dialog_init_middle));
-		messageBuilder.append(getResources().getString(R.string.intent_extra_space));
-		messageBuilder.append(deviceType);
-		messageBuilder.append(getResources().getString(R.string.intent_extra_space));
-		messageBuilder.append(getResources().getString(R.string.dialog_init_end));
-		AlertDialog.Builder alertDialog =
-				CommonDialogUtils.getAlertDialogWithTwoButtonAndTitle(context,
-				                                                      getResources().getString(R.string.dialog_init_device_type),
-				                                                      messageBuilder.toString(),
-				                                                      getResources().getString(R.string.yes),
-				                                                      getResources().getString(R.string.no),
-				                                                      dialogClickListener, dialogClickListener);
-		alertDialog.show();
+		if (isReLogin) {
+			getClientCredentials();
+		} else {
+			StringBuilder messageBuilder = new StringBuilder();
+			messageBuilder.append(getResources().getString(R.string.dialog_init_middle));
+			messageBuilder.append(getResources().getString(R.string.intent_extra_space));
+			messageBuilder.append(deviceType);
+			messageBuilder.append(getResources().getString(R.string.intent_extra_space));
+			messageBuilder.append(getResources().getString(R.string.dialog_init_end));
+			AlertDialog.Builder alertDialog =
+					CommonDialogUtils.getAlertDialogWithTwoButtonAndTitle(context,
+							getResources().getString(R.string.dialog_init_device_type),
+							messageBuilder.toString(),
+							getResources().getString(R.string.yes),
+							getResources().getString(R.string.no),
+							dialogClickListener, dialogClickListener);
+			alertDialog.show();
+		}
 	}
 
 	private void showNoSystemAppDialog(){

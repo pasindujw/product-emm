@@ -25,5 +25,5 @@ import org.wso2.emm.agent.proxy.beans.Token;
  * can implement this when they retrieve tokens.
  */
 public interface TokenCallBack {
-	void onReceiveTokenResult(Token token, String status);
+	void onReceiveTokenResult(Token token, String status, String message);
 }
