@@ -105,6 +105,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="org.ws2.emm.agent.APPLICATION_CRASHED" />
 
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>

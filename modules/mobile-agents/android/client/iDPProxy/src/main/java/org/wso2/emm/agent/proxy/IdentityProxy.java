@@ -84,7 +84,7 @@ public class IdentityProxy implements CallBack {
             Log.d(TAG, "receiveNewAccessToken");
         }
         IdentityProxy.token = token;
-        tokenCallBack.onReceiveTokenResult(token, status);
+        tokenCallBack.onReceiveTokenResult(token, status, message);
     }
 
     /**

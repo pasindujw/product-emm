@@ -26,6 +26,7 @@ import android.app.admin.DevicePolicyManager;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.emm.agent.AndroidAgentException;
+import org.wso2.emm.agent.AuthenticationActivity;
 import org.wso2.emm.agent.R;
 import org.wso2.emm.agent.api.ApplicationManager;
 import org.wso2.emm.agent.api.DeviceInfo;
@@ -317,14 +318,26 @@ public class MessageProcessor implements APIResultCallBack {
 
 			if (result != null) {
 				responseStatus = result.get(Constants.STATUS_KEY);
+				response = result.get(Constants.RESPONSE);
 				if (Constants.Status.SUCCESSFUL.equals(responseStatus) || Constants.Status.CREATED.equals(responseStatus)) {
-					response = result.get(Constants.RESPONSE);
 					if (response != null && !response.isEmpty()) {
 						if (Constants.DEBUG_MODE_ENABLED) {
 							Log.d(TAG, "Pending Operations List: " + response);
 						}
 						performOperation(response);
 					}
+				} else if (Constants.Status.AUTHENTICATION_FAILED.equals(responseStatus) &&
+						org.wso2.emm.agent.proxy.utils.Constants.REFRESH_TOKEN_EXPIRED.equals(response)) {
+					Log.d(TAG, "Requesting credentials to obtain new token pair.");
+					LocalNotification.stopPolling(context);
+					Preference.putBoolean(context, Constants.TOKEN_EXPIRED, true);
+					CommonUtils.displayNotification(context,
+							R.drawable.notification,
+							context.getResources().getString(R.string.title_need_to_sign_in),
+							context.getResources().getString(R.string.msg_need_to_sign_in),
+							AuthenticationActivity.class,
+							Constants.TOKEN_EXPIRED,
+							Constants.SIGN_IN_NOTIFICATION_ID);
 				}
 			}
 		}

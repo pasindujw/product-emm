@@ -410,4 +410,8 @@
     <string name="split_delimiter">,</string>
     <!-- Android For Work User Restrictions -->
     <string name="allow_parent_profile_app_linking">ALLOW_PARENT_PROFILE_APP_LINKING</string>
+
+    <string name="authentication_successful">Successfully Authenticated!</string>
+    <string name="title_need_to_sign_in">Authentication failure</string>
+    <string name="msg_need_to_sign_in">Please sign in again by providing password.</string>
 </resources>

@@ -92,6 +92,7 @@ public class Constants {
 	public static final int HTTP = 80;
 	public static final int HTTPS = 443;
 	public static final String BKS = "BKS";
+	public static final String REFRESH_TOKEN_EXPIRED = "Refresh token is expired.";
 
 
 	public static final int ADD_HEADER_CALLBACK = 5001;

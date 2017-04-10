@@ -113,27 +113,34 @@ public class APIController implements TokenCallBack {
 				this.clientSecret);
 	}
 
-
 	@Override
-	public void onReceiveTokenResult(Token token, String status) {
-		this.token = token;
-		setRequestMethod(apiEndPointInfo.getHttpMethod());
-		if(isStringRequest) {
-			sendStringRequest(apiResultCallback, apiEndPointInfo, false);
-		} else {
-			if (apiEndPointInfo.getRequestParamsMap() != null) {
+	public void onReceiveTokenResult(Token token, String status, String message) {
+		if (Constants.REQUEST_SUCCESSFUL.equals(status)) {
+			this.token = token;
+			setRequestMethod(apiEndPointInfo.getHttpMethod());
+			if (isStringRequest) {
 				sendStringRequest(apiResultCallback, apiEndPointInfo, false);
-			} else if (apiEndPointInfo.getRequestParams() != null) {
-				if (isJSONObject(apiEndPointInfo.getRequestParams())) {
-					sendJsonObjectRequest(apiResultCallback, apiEndPointInfo, false);
-				} else {
-					sendJsonArrayRequest(apiResultCallback, apiEndPointInfo, false);
-				}
-			} else if (apiEndPointInfo.isJSONArrayRequest()) {
-				sendJsonArrayRequest(apiResultCallback, apiEndPointInfo, false);
 			} else {
-				sendJsonObjectRequest(apiResultCallback, apiEndPointInfo, false);
+				if (apiEndPointInfo.getRequestParamsMap() != null) {
+					sendStringRequest(apiResultCallback, apiEndPointInfo, false);
+				} else if (apiEndPointInfo.getRequestParams() != null) {
+					if (isJSONObject(apiEndPointInfo.getRequestParams())) {
+						sendJsonObjectRequest(apiResultCallback, apiEndPointInfo, false);
+					} else {
+						sendJsonArrayRequest(apiResultCallback, apiEndPointInfo, false);
+					}
+				} else if (apiEndPointInfo.isJSONArrayRequest()) {
+					sendJsonArrayRequest(apiResultCallback, apiEndPointInfo, false);
+				} else {
+					sendJsonObjectRequest(apiResultCallback, apiEndPointInfo, false);
+				}
 			}
+		} else if (Constants.ACCESS_FAILURE.equals(status)) {
+			Log.w(TAG, "Bad request: " + message);
+			Map<String, String> responseParams = new HashMap<>();
+			responseParams.put(Constants.SERVER_RESPONSE_STATUS, status);
+			responseParams.put(Constants.SERVER_RESPONSE_BODY, message);
+			apiResultCallback.onReceiveAPIResult(responseParams, IdentityProxy.getInstance().getRequestCode());
 		}
 	}
 

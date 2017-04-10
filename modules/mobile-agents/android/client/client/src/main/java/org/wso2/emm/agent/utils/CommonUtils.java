@@ -17,6 +17,8 @@
  */
 package org.wso2.emm.agent.utils;
 
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
@@ -30,6 +32,8 @@ import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.TaskStackBuilder;
 import android.util.Base64;
 import android.util.Log;
 import com.fasterxml.jackson.core.JsonGenerationException;
@@ -612,6 +616,27 @@ public class CommonUtils {
 				return String.valueOf(org.wso2.emm.agent.proxy.utils.Constants.HTTPS);
 			}
 		}
+	}
+
+	public static void displayNotification(Context context, int icon, String title, String message, Class<?> sourceActivityClass, String tag, int id){
+		NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context);
+		mBuilder.setSmallIcon(icon);
+		mBuilder.setContentTitle(title);
+		mBuilder.setContentText(message);
+		mBuilder.setOngoing(true);
+		mBuilder.setOnlyAlertOnce(true);
+
+		Intent resultIntent = new Intent(context, sourceActivityClass);
+		TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
+		stackBuilder.addParentStack(sourceActivityClass);
+
+		// Adds the Intent that starts the Activity to the top of the stack
+		stackBuilder.addNextIntent(resultIntent);
+		PendingIntent resultPendingIntent = stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+		mBuilder.setContentIntent(resultPendingIntent);
+
+		NotificationManager mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+		mNotificationManager.notify(tag, id, mBuilder.build());
 	}
 
 }
