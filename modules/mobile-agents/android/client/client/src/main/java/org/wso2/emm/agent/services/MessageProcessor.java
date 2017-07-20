@@ -28,6 +28,7 @@ import org.json.JSONObject;
 import org.wso2.emm.agent.AndroidAgentException;
 import org.wso2.emm.agent.AuthenticationActivity;
 import org.wso2.emm.agent.R;
+import org.wso2.emm.agent.ServerDetails;
 import org.wso2.emm.agent.api.ApplicationManager;
 import org.wso2.emm.agent.api.DeviceInfo;
 import org.wso2.emm.agent.beans.AppInstallRequest;
@@ -42,6 +43,7 @@ import org.wso2.emm.agent.utils.Preference;
 import org.wso2.emm.agent.utils.CommonUtils;
 
 import android.content.Context;
+import android.content.Intent;
 import android.util.Log;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
@@ -70,6 +72,7 @@ public class MessageProcessor implements APIResultCallBack {
 	private int operationId;
 	private boolean isUpgradeTriggered = false;
 	private boolean isShellCommandTriggered = false;
+	private boolean isEnterpriseWipeTriggered = false;
 	private DevicePolicyManager devicePolicyManager;
 	private static final int ACTIVATION_REQUEST = 47;
 	private static final String ERROR_STATE = "ERROR";
@@ -164,7 +167,10 @@ public class MessageProcessor implements APIResultCallBack {
 					if (operation.getCode().equals(Constants.Operation.WIPE_DATA) && !operation.getStatus().
 							equals(ERROR_STATE)) {
 						isWipeTriggered = true;
-					} else if (operation.getCode().equals(Constants.Operation.REBOOT) && !operation.getStatus().
+					} else if (operation.getCode().equals(Constants.Operation.ENTERPRISE_WIPE) && !operation.getStatus().
+							equals(ERROR_STATE)){
+						isEnterpriseWipeTriggered = true;
+					}else if (operation.getCode().equals(Constants.Operation.REBOOT) && !operation.getStatus().
 							equals(ERROR_STATE)) {
 						isRebootTriggered = true;
 					} else if (operation.getCode().equals(Constants.Operation.UPGRADE_FIRMWARE) && !operation.getStatus().
@@ -302,7 +308,17 @@ public class MessageProcessor implements APIResultCallBack {
 					Log.i(TAG, "Not the device owner.");
 				}
 			}
+			if (isEnterpriseWipeTriggered) {
+				CommonUtils.disableAdmin(context);
 
+				Intent intentEnterpriseWipe = new Intent(context, ServerDetails.class);
+				intentEnterpriseWipe.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+				intentEnterpriseWipe.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+				context.startActivity(intentEnterpriseWipe);
+				if (Constants.DEBUG_MODE_ENABLED) {
+					Log.d(TAG, "Started enterprise wipe.");
+				}
+			}
 			if (isRebootTriggered) {
 				CommonUtils.callSystemApp(context, Constants.Operation.REBOOT, null, null);
 			}
